@@ -4,15 +4,15 @@
 #include "byte_stream.hh"
 
 #include <cstdint>
-#include <string>
 #include <list>
+#include <string>
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
 
 // the definition of segment
-class interval{
-public:
+class interval {
+  public:
     size_t begin, end;
     std::string data;
     interval(size_t b, size_t e, std::string d);
@@ -29,7 +29,7 @@ class StreamReassembler {
     bool _receive_eof;
     size_t _no_assembled_bytes;
 
-public:
+  public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
     //! and those that have not yet been reassembled.
