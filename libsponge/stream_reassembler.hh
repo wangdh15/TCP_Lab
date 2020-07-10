@@ -5,17 +5,31 @@
 
 #include <cstdint>
 #include <string>
+#include <list>
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
+
+// the definition of segment
+class interval{
+public:
+    size_t begin, end;
+    std::string data;
+    interval(size_t b, size_t e, std::string d);
+};
+
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
 
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
+    std::list<interval> _no_assembled_data;
+    size_t _no_assembled_index;
+    bool _receive_eof;
+    size_t _no_assembled_bytes;
 
-  public:
+public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
     //! and those that have not yet been reassembled.
@@ -31,7 +45,7 @@ class StreamReassembler {
     //! \param data the string being added
     //! \param index the index of the first byte in `data`
     //! \param eof whether or not this segment ends with the end of the stream
-    void push_substring(const std::string &data, const uint64_t index, const bool eof);
+    void push_substring(const std::string &data, const size_t index, const bool eof);
 
     //! \name Access the reassembled byte stream
     //!@{
