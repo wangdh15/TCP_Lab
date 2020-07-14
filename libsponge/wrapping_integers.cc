@@ -1,5 +1,7 @@
 #include "wrapping_integers.hh"
 
+#include <iostream>
+
 // Dummy implementation of a 32-bit wrapping integer
 
 // For Lab 2, please replace with a real implementation that passes the
@@ -14,8 +16,9 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
-    DUMMY_CODE(n, isn);
-    return WrappingInt32{0};
+    // 直接赋值，相当于取低32位
+    uint32_t t = n;
+    return isn + t;
 }
 
 //! Transform a WrappingInt32 into an "absolute" 64-bit sequence number (zero-indexed)
@@ -29,6 +32,11 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
-    DUMMY_CODE(n, isn, checkpoint);
-    return {};
+    WrappingInt32 check_uint32 = wrap(checkpoint, isn);
+    uint32_t d1 = n - check_uint32, d2 = check_uint32 - n;
+    //    判断左侧和右侧那个大，以及减的话是否会越界
+    if (d1 > d2 && checkpoint >= d2)
+        return checkpoint - d2;
+    else
+        return checkpoint + d1;
 }
