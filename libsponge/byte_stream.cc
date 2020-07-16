@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include <iostream>
 
 // Dummy implementation of a flow-controlled in-memory byte stream.
 
@@ -26,6 +27,7 @@ size_t ByteStream::write(const string &data) {
         _byte_written++;
         cnt++;
     }
+    cout << "Call from write: " << _buff.size() << endl;
     return cnt;
 }
 
@@ -62,4 +64,7 @@ size_t ByteStream::bytes_written() const { return _byte_written; }
 
 size_t ByteStream::bytes_read() const { return _byte_read; }
 
-size_t ByteStream::remaining_capacity() const { return _cap - _buff.size(); }
+size_t ByteStream::remaining_capacity() const {
+    cout << "Call from remain cap: " << _buff.size() << endl;
+    return _cap - _buff.size();
+}
