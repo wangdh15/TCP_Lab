@@ -44,12 +44,10 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     bool flag = false;
     for (auto i = _no_assembled_data.begin(); i != _no_assembled_data.end(); i++) {
         auto x = *i;
-//        cout << cur_begin << " " << cur_end << " " << cur_string << endl;
         if (x.end + 1 < cur_begin)
             continue;
         else if (x.begin > cur_end + 1) {
             if (!flag) {
-                cout << x.begin << " " << cur_end << endl;
                 _no_assembled_bytes += cur_string.size();
                 _no_assembled_data.insert(i, interval(cur_begin, cur_end, cur_string));
                 flag = true;
@@ -66,7 +64,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             } else if (x.begin >= cur_begin && x.end >= cur_end) {
                 cur_string = cur_string + x.data.substr(cur_end + 1 - x.begin);
                 cur_end = x.end;
-                cout << cur_string << endl;
             } else if (x.begin <= cur_begin && x.end >= cur_end) {
                 cur_begin = x.begin;
                 cur_end = x.end;
@@ -77,8 +74,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     }
 
     if (!flag) {
-        cout << "flag:" << endl;
-        cout << cur_begin << " " << cur_end << " " << cur_string << endl;
         _no_assembled_data.emplace_back(cur_begin, cur_end, cur_string);
         _no_assembled_bytes += cur_string.size();
     }
@@ -97,32 +92,23 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         _no_assembled_bytes += _no_assembled_data.back().data.size();
     }
     if (_no_assembled_data.front().begin == _no_assembled_index) {
-        cout << "==================" << endl;
-        cout << _no_assembled_data.front().data << endl;
         size_t  out_remain_cap = _output.remaining_capacity();
-        cout << "out_remain_cap:" << out_remain_cap << endl;
         string sent_data;
         if (out_remain_cap < _no_assembled_data.front().data.size()) {
             sent_data = _no_assembled_data.front().data.substr(0, out_remain_cap);
             _no_assembled_data.front().begin += out_remain_cap;
             _no_assembled_data.front().data = _no_assembled_data.front().data.substr(out_remain_cap);
             _no_assembled_index = _no_assembled_data.front().begin;
-            cout << "111: " << endl;
         } else {
             sent_data = _no_assembled_data.front().data;
             _no_assembled_index = _no_assembled_data.front().end + 1;
             _no_assembled_data.pop_front();
-            cout<< "222: " << endl;
         }
-        cout << "_sent_data:" << sent_data << endl;
         _output.write(sent_data);
         _no_assembled_bytes -= sent_data.size();
         if (_receive_eof && _no_assembled_bytes == 0)
             _output.end_input();
     }
-    cout << _no_assembled_data.size() << endl;
-    cout << _output.bytes_written() << endl;
-    cout << index << " " << _no_assembled_index << " " << _no_assembled_bytes << endl;
 }
 
 size_t StreamReassembler::unassembled_bytes() const { return _no_assembled_bytes; }
