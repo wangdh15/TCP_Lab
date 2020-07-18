@@ -1,9 +1,9 @@
 #include "byte_stream.hh"
 
 #include <algorithm>
+#include <iostream>
 #include <iterator>
 #include <stdexcept>
-#include <iostream>
 
 // Dummy implementation of a flow-controlled in-memory byte stream.
 
@@ -63,6 +63,4 @@ size_t ByteStream::bytes_written() const { return _byte_written; }
 
 size_t ByteStream::bytes_read() const { return _byte_read; }
 
-size_t ByteStream::remaining_capacity() const {
-    return _cap - _buff.size();
-}
+size_t ByteStream::remaining_capacity() const { return _cap - _buff.size(); }

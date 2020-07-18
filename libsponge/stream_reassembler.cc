@@ -34,9 +34,8 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     }
     size_t begin_rcv = index, end_rcv = index + data.size() - 1;
     if (end_rcv < _no_assembled_index || begin_rcv >= _capacity + _no_assembled_index) {
-        return ;
+        return;
     }
-
 
     list<interval> res;
     size_t cur_begin = begin_rcv, cur_end = end_rcv;
@@ -92,7 +91,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         _no_assembled_bytes += _no_assembled_data.back().data.size();
     }
     if (_no_assembled_data.front().begin == _no_assembled_index) {
-        size_t  out_remain_cap = _output.remaining_capacity();
+        size_t out_remain_cap = _output.remaining_capacity();
         string sent_data;
         if (out_remain_cap < _no_assembled_data.front().data.size()) {
             sent_data = _no_assembled_data.front().data.substr(0, out_remain_cap);
