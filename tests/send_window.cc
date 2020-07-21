@@ -79,6 +79,7 @@ int main() {
             test.execute(ExpectNoSegment{});
         }
 
+        // 失败的样例
         {
             TCPConfig cfg;
             WrappingInt32 isn(rd());
