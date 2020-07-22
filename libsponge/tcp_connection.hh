@@ -21,6 +21,16 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    size_t _time_since_last_segment_received{0};
+
+    enum stat {CLOSED, SYN_SENT, SYN_RECEIVED, ESTABLISHED, CLOSED_WAIT, LAST_ACK, FIN_WAIT1, FIN_WAIT2, CLOSING, TIME_WAIT};
+
+    //! 当前所处的状态
+    stat _cur_state{CLOSED};
+
+    //! 是否处于rst状态
+    bool _rst{false};
+
   public:
     //! \name "Input" interface for the writer
     //!@{
@@ -94,6 +104,8 @@ class TCPConnection {
     TCPConnection(const TCPConnection &other) = delete;
     TCPConnection &operator=(const TCPConnection &other) = delete;
     //!@}
+
+    void tmp_sent();
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_FACTORED_HH
