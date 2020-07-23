@@ -29,7 +29,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         if (!_syn_rec) { // 自己之前没有收到过syn字段的数据
             _syn_rec = true;
             _receiver.segment_received(seg);  //发给自己的rec，用于设置好rec的isn
-            if (seg.header().ack) {  // 带有ack字段，则表示我是客户端，收到了服务器端的回应
+            if (seg.header().ack) {  // 带有ack字段，则表示我是客户端，收到了服务器端的回应，我之前肯定发送过syn，这里需要将收到的发给sen，然后还需要发送一个空的ack回复。
                 _sender.ack_received(seg.header().ackno, seg.header().win);
                 _sender.send_empty_segment();
                 tmp_sent();
