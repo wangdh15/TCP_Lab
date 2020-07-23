@@ -31,6 +31,17 @@ class TCPConnection {
     //! 是否处于rst状态
     bool _rst{false};
 
+    //! 表示自己是不是接收到fin
+    bool _fin_rev{false};
+
+    //! 表示自己是否收到过syn
+    bool _syn_rec{false};
+
+    //! 表示自己是否发过syn
+    bool _syn_sent{false};
+
+    bool _finish{false};
+
   public:
     //! \name "Input" interface for the writer
     //!@{

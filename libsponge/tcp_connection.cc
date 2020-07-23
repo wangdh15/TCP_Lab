@@ -24,45 +24,52 @@ size_t TCPConnection::time_since_last_segment_received() const { return _time_si
 //! 收到一个数据的操作
 void TCPConnection::segment_received(const TCPSegment &seg) {
     _time_since_last_segment_received = 0;
-
-    //  当前处于关闭状态，且收到了一个来自对方的链接，
-    // 结束之后自己的rec和sen都应该就绪了
-    if (_cur_state == stat::CLOSED && seg.header().syn) {
-        _cur_state = stat::SYN_RECEIVED;
-        _receiver.segment_received(seg);  // 将接受到的传递给rec，设置好rec的各个属性
-        // 假装接受了一个ack字段，仅仅用来设置窗口，而且其内部也会调用fill_window方法，发送SYN + ACK数据。
-        _sender.ack_received(WrappingInt32{0}, seg.header().win);
-        tmp_sent(); // 将sen发的内容放入connection的输出队列中
-    } else if (_cur_state == stat::SYN_SENT && seg.header().syn) { // 客户端收到了来自服务器的同步确认字段
-        _cur_state = stat::ESTABLISHED;
-        _sender.ack_received(seg.header().ackno, seg.header().win); // 将服务器发来的SYN + ACK传递给自己的send，设置好窗口
-        _receiver.segment_received(seg);  // 将受到的传给自己的rec。
-        tmp_sent();
-    } else if (_cur_state == stat::SYN_RECEIVED) { // 服务器端收到了第三次握手的数据
-        if (seg.header().fin) {
-            _cur_state = stat::FIN_WAIT1;
-            _sender.ack_received(seg.header().ackno, seg.header().win);
-        } else if (seg.header().ack) {
-            _cur_state = stat::ESTABLISHED;
+//    _receiver.segment_received(seg); // 确定rec可以管理好自己的状态
+    if (seg.header().syn) {  // 收到了一个头部带有syn的字段
+        if (!_syn_rec) { // 自己之前没有收到过syn字段的数据
+            _syn_rec = true;
+            _receiver.segment_received(seg);  //发给自己的rec，用于设置好rec的isn
+            if (seg.header().ack) {  // 带有ack字段，则表示我是客户端，收到了服务器端的回应
+                _sender.ack_received(seg.header().ackno, seg.header().win);
+                _sender.send_empty_segment();
+                tmp_sent();
+            } else { // 自己收到了一个syn，而且自己之前没有收到syn，则自己需要发送一个syn+ack
+                if (_syn_sent) { // 如果自己之前发过syn，则只需要发送一个ack即可。
+                    _sender.send_empty_segment();
+                    tmp_sent();
+                } else { // 如果自己之前没有发送过syn，则说明自己是第一次收到对面发来的syn，这个时候需要发送一个syn+ack的报文。
+                    _syn_sent = true;
+                    connect(); // 直接调用connect方法，就发送了一个syn + ack的报文了。
+                }
+            }
+        }
+    } else {
+        if (_syn_rec && seg.header().ack) {
+            _receiver.segment_received(seg);
             _sender.ack_received(seg.header().ackno, seg.header().win);
         }
-        _receiver.segment_received(seg);
-    } else if (_cur_state == stat::ESTABLISHED) {
-        if (seg.header().fin) {
-            _cur_state = stat::FIN_WAIT1;
-        }
-        if (seg.header().ack) _sender.ack_received(seg.header().ackno, seg.header().win);
-        _receiver.segment_received(seg);
     }
-//    if (seg.header().ack) {
-//        _sender.ack_received(seg.header().ackno, seg.header().win);
-//        tmp_sent();
+//    if (seg.header().syn && !seg.header().ack && _sender.next_seqno_absolute() == 0) { // 说明当前处于CLOSED状态，收到了来自客户端的syn请求
+//        _sender.ack_received(_sender.next_seqno(), seg.header().win);  // 没有ack号，传入一个和isn相同的序列号，并设置好自己的接受窗口
 //    }
-//    _receiver.segment_received(seg);
-
+//    if (seg.header().ack) {
+//        _sender.ack_received(seg.header().ackno, seg.header().win);  // 如果seg中的ack为true，则直接将这个发送给自己的sen
+//    }
+//    tmp_sent();  //尝试情况sender的发送队列。
+//
+//    if (seg.header().fin) { // 收到了来自对方的fin，如果自己之前发送过fin，则表示自己需要等待，如果自己之前没有发过，则不需要等待
+//        if (_sender.fin_sent()) _linger_after_streams_finish = true;
+//        else _linger_after_streams_finish = false;
+//    }
+//
+//    if (_sender.fin_sent() && _sender.bytes_in_flight() == 0) {
+//        if (!_linger_after_streams_finish) {
+//            _finish = true;  // 表示服务器端可以直接关闭了。
+//        }
+//    }
 }
 
-bool TCPConnection::active() const { return false; }
+bool TCPConnection::active() const { return true; }
 
 //! 写数据的操作
 size_t TCPConnection::write(const string &data) {
@@ -87,10 +94,11 @@ void TCPConnection::end_input_stream() {
 
 void TCPConnection::connect() {
     //! 跳转到SYN_SENT状态
-    if (_cur_state != stat::CLOSED) return;
-    _cur_state = stat::SYN_SENT;
+//    if (_cur_state != stat::CLOSED) return;
+//    _cur_state = stat::SYN_SENT;
+    _syn_sent = true;
     _sender.fill_window();
-    tmp_sent();
+    tmp_sent(); // 一开始的时候，自己的rec没有收到任何东西，所以这个方法中不会携带ack字段
 }
 
 TCPConnection::~TCPConnection() {
@@ -113,7 +121,7 @@ void TCPConnection::tmp_sent() {
         TCPSegment seg = _sender.segments_out().front();
         _sender.segments_out().pop();
         auto ack = _receiver.ackno();
-        if (ack.has_value()) {
+        if (ack.has_value()) {  // 除了客户端第一次发送syn之外，这个字段应该都是true
             seg.header().ack = true;
             seg.header().ackno = ack.value();
         } else seg.header().ack = false;
